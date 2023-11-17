@@ -5,37 +5,59 @@ library(terra)
 
 setwd("~/rsf")
 
+# swe
+swe_50m <-rast('./ASO_Tuolumne_2023Mar16-17_AllData_and_Reports/ASO_Tuolumne_2023Mar16-17_swe_50m.tif')
+plot(swe_50m)
+swe_50m
+
+# agg test
+swe_250m <-aggregate(swe_50m, fact=5, fun=mean)
+swe_250m
+plot(swe_250m)
+writeRaster(swe_250m, "./rasters/swe_250m.tif")
+
+# tuo shp
+tuo_aso_shp <-vect('./vectors/tuo_aso_shp.gpkg')
+plot(tuo_aso_shp)
+
 # read in cc
 cc_tuo_30_v1 <-rast('./rasters/cc_tuo.tif')
 
-# read in snsr
-snsr_shp_v1 <-vect('./vectors/snsr_shp.gpkg')
-snsr <-project(snsr_shp_v1, crs(cc_tuo_30_v1))
+# crop
+cc_tuo_30 <-crop(mask(cc_tuo_30_v1, tuo_aso_shp),ext(tuo_aso_shp))
+plot(cc_tuo_30)
+cc_tuo_30
 
-# read in tuo
-tuo_v1 <-vect("./vectors/ca_basins/tuolumne_v2.gpkg")
-tuo <-project(tuo_v1, crs(snsr))
-plot(tuo)
-plot(snsr, add = T)
+# # read in snsr
+# snsr_shp_v1 <-vect('./vectors/snsr_shp.gpkg')
+# snsr <-project(snsr_shp_v1, crs(cc_tuo_30_v1))
+# 
+# # read in tuo
+# tuo_v1 <-vect("./vectors/ca_basins/tuolumne_v2.gpkg")
+# tuo <-project(tuo_v1, crs(snsr))
+# plot(tuo)
+# plot(snsr, add = T)
 
 # mask cc
-tuo_snsr_ext <-ext(220000, 306603.16327276, 4165222.3694235, 4234629.3939246)
-cc_tuo_30 <-crop(mask(cc_tuo_30_v1, snsr),tuo_snsr_ext)
-plot(cc_tuo_30)
-plot(tuo, add = TRUE)
-plot(snsr, add = TRUE)
+# tuo_snsr_ext <-ext(220000, 306603.16327276, 4165222.3694235, 4234629.3939246)
+# cc_tuo_30 <-crop(mask(cc_tuo_30_v1, snsr),tuo_snsr_ext)
+# plot(cc_tuo_30)
+# plot(tuo, add = TRUE)
+# plot(snsr, add = TRUE)
 # writeRaster(cc_tuo_30[[1]], "./rasters/cc_tuo_30m.tif")
 
 # create shape file
 # crop, works
-tuo_snsr <-crop(snsr, tuo)
-plot(cc_tuo_30)
-plot(tuo_snsr, add = TRUE)
+# tuo_snsr <-crop(snsr, tuo)
+# plot(cc_tuo_30)
+# plot(tuo_snsr, add = TRUE)
 # writeVector(tuo_snsr, "./vectors/tuo_snsr.gpkg")
 
+ext()
+
 # create custom rast
-r_50m <- rast(nrow = 1388, ncol = 1732,
-          xmin = 220000, xmax = 306603.16327276, ymin = 4165222.3694235, ymax = 4234629.3939246)
+r_50m <- rast(nrow = 1105, ncol = 1884,
+          xmin = 212410.1, xmax = 306603.2, ymin = 4179351, ymax = 4234599)
 
 r_50m
 # height <-ymax(r_50m) -ymin(r_50m)
@@ -83,8 +105,10 @@ perc_bi_50 <-calc_percents(cc_m_50_bi)
 # 250 m mean
 cc_m_250_bi <- aggregate(cc_m_50_bi, fact=5, fun=mean)
 cc_m_250_n <- aggregate(cc_m_50_n, fact=5, fun=mean)
-perc_250_n <-calc_percents(cc_m_250_n)
-perc_250_n <-calc_percents(cc_m_250_n)
+perc_bi_250 <-calc_percents(cc_m_250_bi)
+perc_n_250 <-calc_percents(cc_m_250_n)
 # writeRaster(cc_m_250_bi, "./rasters/cc_tuo_bi_250m.tif")
 # writeRaster(cc_m_250_n, "./rasters/cc_tuo_near_250m.tif")
 
+
+#### SWE data
