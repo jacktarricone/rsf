@@ -8,6 +8,7 @@ library(tidyr)
 library(dplyr)
 library(ggpmisc)
 library(Metrics)
+library(glue)
 
 setwd("~/rsf")
 
@@ -51,8 +52,8 @@ plot(snsr_tuo)
 # swe
 swe_50m_raw <-rast('./rasters/ASO_Tuolumne_2023Mar16-17_AllData_and_Reports/ASO_Tuolumne_2023Mar16-17_swe_50m.tif')
 swe_50m <-crop(mask(swe_50m_raw, snsr_tuo),ext(snsr_tuo))
-plot(swe_50m)
-swe_50m
+# plot(swe_50m)
+# swe_50m
 # writeRaster(swe_50m, "./rasters/swe_50m.tif")
 
 # agg test
