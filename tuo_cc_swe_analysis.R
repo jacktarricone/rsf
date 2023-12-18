@@ -3,6 +3,9 @@
 
 library(terra)
 library(sf)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
 
 setwd("~/rsf")
 
@@ -19,8 +22,8 @@ swe_50m
 # writeRaster(swe_50m, "./rasters/swe_50m.tif")
 
 # agg test
-swe_250m_mean <-aggregate(swe_50m, fact=5, fun=mean)
-swe_250m_sd <-aggregate(swe_50m, fact=5, fun=sd)
+swe_250m_mean <-aggregate(swe_50m, fact=5, fun=mean, na.rm = FALSE)
+swe_250m_sd <-aggregate(swe_50m, fact=5, fun=sd, na.rm = FALSE)
 swe_250m_mean
 plot(swe_250m_mean)
 plot(swe_250m_sd)
@@ -72,7 +75,6 @@ perc_n_50 <-calc_percents(cc_m_50_n)
 
 
 
-rcts <- aggregate( notna(r),  4,  fun=sum) 
 
 # bilinear
 cc_m_50_bi <-resample(cc_tuo_30, swe_50m, method = 'bilinear')
@@ -89,9 +91,73 @@ mask_all_f <-mask(swe_50m, cc_0_mask, maskvalue = 999)
 mask_all_f
 plot(mask_all_f)
 plot(swe_50m)
+
+# calc number and percentage of pixels
 perc_pixels <-mask((aggregate( not.na(mask_all_f),  5,  fun=sum)/25)*100,snsr_tuo) 
 perc_pixels
 plot(perc_pixels)
+
+# n
+n_pixels <-mask(aggregate( not.na(mask_all_f),  5,  fun=sum),snsr_tuo) 
+n_pixels
+plot(n_pixels)
+hist(n_pixels)
+freq(n_pixels)
+
+
+# masked 250 m
+swe_250m_mean <-aggregate(swe_50m, fact=5, fun=mean, na.rm = FALSE)
+swe_250m_sd <-aggregate(swe_50m, fact=5, fun=sd, na.rm = FALSE)
+swe_250m_f90_mean <- aggregate(mask_all_f, fact=5, fun=mean, na.rm=TRUE)
+swe_250m_f90_sd <- aggregate(mask_all_f, fact=5, fun=sd, na.rm=TRUE)
+
+
+plot(swe_250m_f90_mean)
+plot(swe_250m_mean)
+
+plot(swe_250m_f90_sd)
+plot(swe_250m_sd)
+
+
+writeRaster(swe_250_f90_mean, "./rasters/swe_250m_f90_mean.tif", overwrite = T)
+writeRaster(swe_250_f90_sd, "./rasters/swe_250m_f90_sd.tif", overwrite = T)
+writeRaster(swe_250_f90_mean, "./rasters/swe_250m_f90_mean.tif", overwrite = T)
+
+
+# plopt deviaions against eachother
+swe_sd_f90_df <-as.data.frame(swe_250_f90_sd, xy = T)
+swe_sd_df <-as.data.frame(swe_250m_sd, xy = T)
+head(swe_sd_df)
+
+
+joined_df <-full_join(sd_f90_df, swe_sd_f90_df, by = c('x','y'))
+colnames(joined_df)[3:4] <-c("no_forest","forest")
+head(joined_df)
+
+# plot czo
+p <-ggplot(joined_df, aes(x = forest, y = no_forest)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  # geom_smooth(method = "lm", se = FALSE) +
+  # geom_errorbar(aes(y= insar_dswe, xmin=insitu_dswe-abs(insitu_error), xmax=insitu_dswe+abs(insitu_error)), 
+  #              width=0.1, colour = 'black', alpha=0.4, size=.5) +
+  geom_point() +  
+  scale_y_continuous(limits = c(-10,10),breaks = c(seq(-10,10,2)),expand = (c(0,0))) +
+  scale_x_continuous(limits = c(-10,10),breaks = c(seq(-10,10,2)),expand = (c(0,0))) +
+  ylab(Delta~"SWE InSAR (cm)") + xlab(Delta~"SWE In Situ (cm)") +
+  scale_color_manual(name = "InSAR Pair",
+                     values = my_colors,
+                     breaks = c('feb12_19', 'feb19_26', 'feb12_26'),
+                     labels = c('Feb. 12-19', 'Feb. 19-26', 'Feb. 12-26'))+
+  scale_fill_discrete(breaks=c('B', 'C', 'A'))  +
+  theme_classic(15) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, linewidth =1), 
+        legend.position = c(.80,.20))
+
+print(p)
+
+
+plot(swe_250m_mean)
+plot(mask_all_f)
 
 # 250 m mean
 cc_m_250_bi <- aggregate(cc_m_50_bi, fact=5, fun=mean)
