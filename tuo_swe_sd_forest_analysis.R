@@ -60,99 +60,216 @@ cc_tuo_30 <-crop(mask(cc_tuo_30_v1, snsr_tuo),ext(snsr_tuo))
 cc_m_50_bi <-resample(cc_tuo_30, swe_50m, method = 'bilinear')
 # writeRaster(cc_m_50_bi, "./rasters/cc_tuo_bi_50m.tif")
 
-
 # mask all forest cover
 cc_0_mask <-ifel(cc_m_50_bi > 10, 999, cc_m_50_bi)
-mask_all_f <-mask(swe_50m, cc_0_mask, maskvalue = 999)
+swe_50m_forest_mask <-mask(swe_50m, cc_0_mask, maskvalue = 999)
+swe_50m_forest_mask
+plot(swe_50m_forest_mask)
 
 # calc number and percentage of pixels
-perc_pixels <-terra::mask((terra::aggregate( not.na(mask_all_f),  5,  fun=sum)/25)*100,snsr_tuo) 
-perc_pixels
+perc_pixels_250m <-(terra::aggregate( not.na(swe_50m_forest_mask),  5,  fun=sum)/25)*100
+perc_pixels_500m <-terra::mask((terra::aggregate( not.na(swe_50m_forest_mask),  10,  fun=sum)/100)*100,snsr_tuo) 
+perc_pixels_1000m <-terra::mask((terra::aggregate( not.na(swe_50m_forest_mask),  20,  fun=sum)/400)*100,snsr_tuo) 
+plot(perc_pixels_1000m)
 
 # n
-n_pixels <-mask(aggregate( not.na(mask_all_f),  5,  fun=sum),snsr_tuo) 
-n_pixels
-plot(n_pixels)
+n_pixels_250m <-mask(aggregate( not.na(swe_50m_forest_mask),  5,  fun=sum),snsr_tuo)
+n_pixels_500m <-mask(aggregate( not.na(swe_50m_forest_mask),  10,  fun=sum),snsr_tuo)
+n_pixels_1000m <-mask(aggregate( not.na(swe_50m_forest_mask),  20,  fun=sum),snsr_tuo)
 
+plot(n_pixels_250m)
+plot(n_pixels_500m)
+plot(n_pixels_1000m)
+plot(swe_50m_forest_mask)
 
-# masked 250 m
-# agg test
-swe_250m_mean <-aggregate(swe_50m, fact=5, fun=mean, na.rm = FALSE)
-swe_250m_sd <-aggregate(swe_50m, fact=5, fun=sd, na.rm = FALSE)
-swe_250m_f90_mean <- aggregate(mask_all_f, fact=5, fun=mean, na.rm=TRUE)
-swe_250m_f90_sd <- aggregate(mask_all_f, fact=5, fun=sd, na.rm=TRUE)
+# masked for forest vs non forest
+# 250m
+swe_250m_mean <-aggregate(swe_50m, fact=5, fun=mean, na.rm = TRUE)
+swe_250m_sd <-aggregate(swe_50m, fact=5, fun=sd, na.rm = TRUE)
+swe_250m_f90_mean <- aggregate(swe_50m_forest_mask, fact=5, fun=mean, na.rm=TRUE)
+swe_250m_f90_sd <- aggregate(swe_50m_forest_mask, fact=5, fun=sd, na.rm=TRUE)
 
+diff_250m <-swe_250m_mean-swe_250m_f90_mean
+plot(diff_250m)
+hist(diff_250m, breaks = 100)
+
+# 500m
+swe_500m_mean <-aggregate(swe_50m, fact=10, fun=mean, na.rm = TRUE)
+swe_500m_sd <-aggregate(swe_50m, fact=10, fun=sd, na.rm = TRUE)
+swe_500m_f90_mean <-aggregate(swe_50m_forest_mask, fact=10, fun=mean, na.rm=TRUE)
+swe_500m_f90_sd <-aggregate(swe_50m_forest_mask, fact=10, fun=sd, na.rm=TRUE)
+plot(swe_500m_f90_mean)
+plot(swe_500m_mean)
+
+diff_500m <-swe_500m_mean-swe_500m_f90_mean
+plot(diff_500m)
+hist(diff_500m, breaks = 100)
+
+# 1000m
+test <-resample(swe_50m, swe_1000m_mean, method = "bilinear")
+test1 <-resample(swe_50m_forest_mask, swe_1000m_mean, method = "bilinear")
+plot(test)
+plot(test1)
+plot(swe_50m)
+plot(swe_50m_forest_mask)
+
+swe_1000m_mean <-aggregate(swe_50m, fact=20, fun=mean, na.rm = TRUE)
+swe_1000m_sd <-aggregate(swe_50m, fact=20, fun=sd, na.rm = TRUE)
+swe_1000m_f90_mean <-aggregate(swe_50m_forest_mask, fact=20, fun=mean, na.rm=TRUE)
+swe_1000m_f90_sd <-aggregate(swe_50m_forest_mask, fact=20, fun=sd, na.rm=TRUE)
+plot(swe_1000m_f90_mean)
+plot(swe_1000m_mean)
+
+diff_1000m <-swe_1000m_mean-swe_1000m_f90_mean
+plot(diff_1000m)
+hist(diff_1000m, breaks = 100)
+
+plot(swe_1000m_sd)
+plot(swe_1000m_f90_sd)
 # writeRaster(swe_250_f90_mean, "./rasters/swe_250m_f90_mean.tif", overwrite = T)
 # writeRaster(swe_250_f90_sd, "./rasters/swe_250m_f90_sd.tif", overwrite = T)
 # writeRaster(swe_250_f90_mean, "./rasters/swe_250m_f90_mean.tif", overwrite = T)
+
+##### 1000m
+# plopt deviaions against eachother
+swe1000_f90_df <-as.data.frame(swe_1000m_f90_mean, xy = T)
+swe1000_df <-as.data.frame(swe_1000m_mean, xy = T)
+perc_df <-as.data.frame(perc_pixels_1000m, xy = TRUE)
+
+joined_df2 <-full_join(swe1000_df, swe1000_f90_df, by = c('x','y'))
+joined_df22 <-full_join(joined_df2, perc_df)
+colnames(joined_df22)[3:5] <-c("no_mask","mask","perc_pix")
+joined_df22$perc_pix <-ifelse(joined_df22$perc_pix == 100, NA, joined_df22$perc_pix)
+joined_df22 <-na.omit(joined_df22)
+head(joined_df22)
+
+
+rmse2 <-round(rmse(joined_df22$no_mask, joined_df22$mask), digits = 2)
+mae2 <-round(mae(joined_df22$no_mask, joined_df22$mask), digits = 2)
+cor2 <-round(cor(joined_df22$no_mask, joined_df22$mask, method = c("pearson")), digits=2) 
+n <-length(joined_df22$no_mask)
+
+pix_scale <-viridis::viridis(9, alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
+
+# plot czo
+p2 <-ggplot(joined_df22, aes(y = no_mask, x = mask, color = perc_pix)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  geom_point(alpha = .25, shape = 16) + 
+  scale_color_viridis(option = "D", limits = c(0,100)) +
+  scale_y_continuous(limits = c(0,3),expand = (c(0,0.01))) +
+  scale_x_continuous(limits = c(0,3),expand = (c(0,0.01))) +
+  ylab("No Mask SWE (m)") + xlab("Forest Mask SWE (m)") +
+  theme(panel.border = element_rect(colour = "black", fill=NA, linewidth =1),
+        aspect.ratio = 1,
+        legend.position = "top",
+        legend.title=element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        legend.box.spacing = unit(0, "pt"))+
+  geom_text(aes(.8, 2.5, label = paste("R = ", cor2, "\n",
+                                       "RMSE =", rmse2," m \n",
+                                       "MAE =", mae2, " m \n",
+                                       "n =", n)), color = "black")+
+  guides(color = guide_colorbar(direction = "horizontal",
+                                label.position = 'top',
+                                barwidth = 17,
+                                barheight = 1,
+                                frame.colour = "black", 
+                                ticks.colour = "black")) 
+
+
+# save
+ggsave(p2,
+       file = "./plots/mask_vs_nomask_swe1000m_v2_TRUE.pdf",
+       width = 4.7,
+       height = 5,
+       units = "in",
+       dpi = 300)
+
+system("open ./plots/mask_vs_nomask_swe1000m_v2_TRUE.pdf")
+
 
 
 # plopt deviaions against eachother
 swe_sd_f90_df <-as.data.frame(swe_250m_f90_sd, xy = T)
 swe_sd_df <-as.data.frame(swe_250m_sd, xy = T)
-perc_df <-as.data.frame(perc_pixels, xy = T)
+perc_df <-as.data.frame(perc_pixels_250m, xy = T)
 head(swe_sd_df)
 
 
 joined_df <-full_join(swe_sd_df, swe_sd_f90_df, by = c('x','y'))
 colnames(joined_df)[3:4] <-c("no_mask","mask")
-joined_df <-na.omit(joined_df)
-head(joined_df)
+joined_df1 <-full_join(joined_df, perc_df)
+colnames(joined_df1)[3:5] <-c("no_mask","mask","perc_pix")
+joined_df1$perc_pix <-ifelse(joined_df1$perc_pix == 100, NA, joined_df1$perc_pix)
+joined_df1 <-na.omit(joined_df1)
+head(joined_df1)
 
-rmse <-round(rmse(joined_df$no_mask, joined_df$mask), digits = 2)
-mae <-round(mae(joined_df$no_mask, joined_df$mask), digits = 2)
-cor <-round(cor(joined_df$no_mask, joined_df$mask, method = c("pearson")), digits=2) 
+
+rmse <-round(rmse(joined_df1$no_mask, joined_df1$mask), digits = 2)
+mae <-round(mae(joined_df1$no_mask, joined_df1$mask), digits = 2)
+cor <-round(cor(joined_df1$no_mask, joined_df1$mask, method = c("pearson")), digits=2) 
 
 
 # plot czo
-p <-ggplot(joined_df, aes(x = mask, y = no_mask)) +
+p <-ggplot(joined_df1, aes(x = mask, y = no_mask, color = perc_pix)) +
   geom_abline(intercept = 0, slope = 1, linetype = 2) +
-  geom_point(color = "firebrick", alpha = .1, shape = 4) +  
-  scale_y_continuous(limits = c(0,2.5),expand = (c(0,0.01))) +
-  scale_x_continuous(limits = c(0,2.5),expand = (c(0,0.01))) +
+  geom_point(alpha = .25, shape = 16) + 
+  scale_color_viridis(option = "A", limits = c(0,100)) +
+  scale_y_continuous(limits = c(0,1),expand = (c(0,0.01))) +
+  scale_x_continuous(limits = c(0,1),expand = (c(0,0.01))) +
   ylab("No Mask SWE SD (m)") + xlab("Forest Mask SWE SD (m)") +
   theme(panel.border = element_rect(colour = "black", fill=NA, linewidth =1),
-        aspect.ratio = 1)+
-  geom_text(aes(.8, 2.1, label = paste("R = ", cor, "\n",
+        aspect.ratio = 1,
+        legend.position = "top",
+        legend.title=element_blank(),
+        plot.margin = unit(c(0.2,0.2,0.2,0.2), "cm"),
+        legend.box.spacing = unit(0, "pt"))+
+  geom_text(aes(.3, .8, label = paste("R = ", cor, "\n",
                                        "RMSE =", rmse," m \n",
-                                       "MAE =", mae, " m \n")))
-
-print(p)
+                                       "MAE =", mae, " m \n")), color = "black")+
+  guides(color = guide_colorbar(direction = "horizontal",
+                                label.position = 'top',
+                                barwidth = 17,
+                                barheight = 1,
+                                frame.colour = "black", 
+                                ticks.colour = "black")) 
 
 # save
 ggsave(p,
-       file = "./plots/mask_vs_nomask_swesd.pdf",
-       width = 5,
+       file = "./plots/mask_vs_nomask_swe_sd_v2.pdf",
+       width = 4.7,
        height = 5,
        units = "in",
        dpi = 300)
 
-system("open ./plots/mask_vs_nomask_swesd.pdf")
+system("open ./plots/mask_vs_nomask_swe_sd_v2.pdf")
 
 
 # plopt deviaions against eachother
-swe_f90_df <-as.data.frame(swe_250m_f90_mean, xy = T)
+swe_250m_f90_df <-as.data.frame(swe_250m_f90_mean, xy = T)
 swe_df <-as.data.frame(swe_250m_mean, xy = T)
+perc_df_250 <-as.data.frame(perc_pixels_250m, xy = T)
 head(swe_df)
-
+head(perc_)
 
 joined_df2 <-full_join(swe_df, swe_f90_df, by = c('x','y'))
-joined_df22 <-full_join(joined_df2, perc_df)
+colnames(joined_df2)[3:4] <-c("no_mask","mask")
+joined_df22 <-full_join(joined_df2, perc_df_250, by = c('x','y'))
 colnames(joined_df22)[3:5] <-c("no_mask","mask","perc_pix")
-joined_df2 <-na.omit(joined_df22)
+joined_df22$perc_pix <-ifelse(joined_df22$perc_pix == 100, NA, joined_df22$perc_pix)
+joined_df22 <-na.omit(joined_df22)
 head(joined_df22)
 
 
-rmse2 <-round(rmse(joined_df2$no_mask, joined_df2$mask), digits = 2)
-mae2 <-round(mae(joined_df2$no_mask, joined_df2$mask), digits = 2)
-cor2 <-round(cor(joined_df2$no_mask, joined_df2$mask, method = c("pearson")), digits=2) 
+rmse2 <-round(rmse(joined_df22$no_mask, joined_df22$mask), digits = 2)
+mae2 <-round(mae(joined_df22$no_mask, joined_df22$mask), digits = 2)
+cor2 <-round(cor(joined_df22$no_mask, joined_df22$mask, method = c("pearson")), digits=2) 
+n2 <-length(joined_df22$no_mask)
 
 pix_scale <-viridis::viridis(9, alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
 
-??viridis
-
 # plot czo
-p2 <-ggplot(joined_df2, aes(y = no_mask, x = mask, color = perc_pix)) +
+p2 <-ggplot(joined_df22, aes(y = no_mask, x = mask, color = perc_pix)) +
   geom_abline(intercept = 0, slope = 1, linetype = 2) +
   geom_point(alpha = .25, shape = 16) + 
   scale_color_viridis(option = "D", limits = c(0,100)) +
@@ -177,8 +294,9 @@ p2 <-ggplot(joined_df2, aes(y = no_mask, x = mask, color = perc_pix)) +
 
 
 # save
-ggsave("./plots/mask_vs_nomask_swe_v2.pdf",
-       width = 4.5,
+ggsave(p2,
+       file = "./plots/mask_vs_nomask_swe_v2.pdf",
+       width = 4.7,
        height = 5,
        units = "in",
        dpi = 300)
